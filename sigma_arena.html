@@ -1,0 +1,2265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sigma Arena | Turf Booking System</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+
+/* ===== CSS VARIABLES ===== */
+:root {
+  --bg-deep:     #050a0f;
+  --bg-card:     #0d1720;
+  --bg-card2:    #111d2a;
+  --accent:      #00ffcc;
+  --accent2:     #00c9ff;
+  --accent3:     #ff4466;
+  --text:        #e8f0fe;
+  --text-muted:  #7a9bbf;
+  --border:      rgba(0,255,204,0.15);
+  --glow:        0 0 24px rgba(0,255,204,0.35);
+  --glow-soft:   0 0 12px rgba(0,255,204,0.15);
+  --radius:      12px;
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-ui:     'Rajdhani', sans-serif;
+  --font-body:   'Inter', sans-serif;
+}
+
+/* ===== RESET ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-deep);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ===== NOISE TEXTURE OVERLAY ===== */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.4;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+
+/* ===== BLUR EFFECT ===== */
+.site-blur { filter: blur(6px); pointer-events: none; user-select: none; }
+
+/* ============================================================
+   AUTH MODAL
+   ============================================================ */
+#authOverlay {
+  position: fixed; inset: 0;
+  background: rgba(5,10,15,0.92);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 5000;
+  backdrop-filter: blur(6px);
+}
+
+.auth-panel {
+  width: 360px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 36px 32px;
+  position: relative;
+  box-shadow: var(--glow);
+  animation: slideUp 0.4s ease;
+}
+
+@keyframes slideUp {
+  from { opacity:0; transform: translateY(30px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+.auth-panel h2 {
+  font-family: var(--font-display);
+  font-size: 32px;
+  letter-spacing: 2px;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.auth-panel p.sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.auth-panel input {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  margin-bottom: 12px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.auth-panel input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0,255,204,0.1);
+}
+
+.auth-panel .btn-primary {
+  width: 100%;
+  background: var(--accent);
+  color: #050a0f;
+  border: none;
+  border-radius: 8px;
+  padding: 13px;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.auth-panel .btn-primary:hover { background: #00e6b8; transform: translateY(-1px); }
+.auth-panel .btn-primary:active { transform: translateY(0); }
+
+.auth-switch { font-size: 13px; color: var(--text-muted); text-align: center; margin-top: 16px; }
+.auth-switch span { color: var(--accent); cursor: pointer; font-weight: 600; }
+.auth-switch span:hover { text-decoration: underline; }
+
+.auth-msg { font-size: 12px; text-align: center; margin-top: 10px; min-height: 18px; color: #ff4466; }
+.auth-msg.success { color: var(--accent); }
+
+/* ============================================================
+   TOPBAR / HEADER
+   ============================================================ */
+#topbar {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 1000;
+  background: rgba(5,10,15,0.9);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 40px;
+  height: 64px;
+}
+
+.logo-text {
+  font-family: var(--font-display);
+  font-size: 26px;
+  letter-spacing: 3px;
+  color: var(--accent);
+  display: flex; align-items: center; gap: 10px;
+}
+
+.logo-dot { width: 10px; height: 10px; background: var(--accent); border-radius: 50%; box-shadow: var(--glow); }
+
+.topnav { display: flex; align-items: center; gap: 6px; }
+
+.topnav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  transition: color 0.2s, background 0.2s;
+}
+
+.topnav a:hover { color: var(--accent); background: rgba(0,255,204,0.06); }
+
+.topnav .btn-logout {
+  background: rgba(255,68,102,0.1);
+  border: 1px solid rgba(255,68,102,0.3);
+  color: #ff4466;
+  padding: 6px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.topnav .btn-logout:hover { background: rgba(255,68,102,0.2); }
+
+#userGreet {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 6px 12px;
+  background: rgba(0,255,204,0.06);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+#hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  padding: 100px 20px 60px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(0,255,204,0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 20% 80%, rgba(0,201,255,0.05) 0%, transparent 60%),
+    linear-gradient(180deg, #050a0f 0%, #0a1520 50%, #050a0f 100%);
+}
+
+.hero-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,255,204,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,204,0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 70%);
+}
+
+.hero-content { position: relative; z-index: 1; }
+
+.hero-badge {
+  display: inline-block;
+  background: rgba(0,255,204,0.08);
+  border: 1px solid rgba(0,255,204,0.3);
+  color: var(--accent);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  padding: 6px 20px;
+  border-radius: 100px;
+  margin-bottom: 24px;
+  animation: fadeDown 0.6s ease 0.2s both;
+}
+
+@keyframes fadeDown {
+  from { opacity:0; transform: translateY(-16px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(56px, 10vw, 110px);
+  line-height: 0.9;
+  letter-spacing: 4px;
+  animation: fadeDown 0.6s ease 0.3s both;
+}
+
+.hero-title .hl { color: var(--accent); }
+
+.hero-sub {
+  font-size: 18px;
+  color: var(--text-muted);
+  margin: 20px 0 36px;
+  font-weight: 300;
+  animation: fadeDown 0.6s ease 0.4s both;
+}
+
+.hero-ctas {
+  display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+  animation: fadeDown 0.6s ease 0.5s both;
+}
+
+.cta-main {
+  background: var(--accent);
+  color: #050a0f;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 1px;
+  padding: 14px 32px;
+  border-radius: 8px;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 24px rgba(0,255,204,0.3);
+}
+
+.cta-main:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,255,204,0.4); }
+
+.cta-ghost {
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 1px;
+  padding: 14px 32px;
+  border-radius: 8px;
+  text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.15);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.cta-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+/* STATS ROW */
+.hero-stats {
+  display: flex; gap: 40px; justify-content: center; flex-wrap: wrap;
+  margin-top: 60px;
+  animation: fadeDown 0.6s ease 0.6s both;
+}
+
+.stat-item { text-align: center; }
+
+.stat-num {
+  font-family: var(--font-display);
+  font-size: 40px;
+  color: var(--accent);
+  letter-spacing: 2px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   SECTION WRAPPER
+   ============================================================ */
+.section {
+  padding: 80px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-label {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 5vw, 56px);
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+}
+
+.section-sub {
+  font-size: 15px;
+  color: var(--text-muted);
+  max-width: 540px;
+  line-height: 1.7;
+  margin-bottom: 48px;
+}
+
+/* DIVIDER */
+.divider {
+  border: none;
+  height: 1px;
+  background: var(--border);
+  margin: 0;
+}
+
+/* ============================================================
+   SPORTS CARDS
+   ============================================================ */
+.sports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.sport-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 24px;
+  cursor: pointer;
+  transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+  position: relative;
+  overflow: hidden;
+}
+
+.sport-card::before {
+  content: '';
+  position: absolute;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: radial-gradient(circle, rgba(0,255,204,0.05) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.sport-card:hover::before { opacity: 1; }
+.sport-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--glow-soft);
+  transform: translateY(-4px);
+}
+
+.sport-card.selected {
+  border-color: var(--accent);
+  background: rgba(0,255,204,0.06);
+  box-shadow: var(--glow);
+}
+
+.sport-icon { font-size: 40px; margin-bottom: 14px; }
+.sport-name {
+  font-family: var(--font-display);
+  font-size: 24px;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+.sport-price { font-size: 13px; color: var(--accent); font-weight: 600; }
+.sport-desc { font-size: 13px; color: var(--text-muted); margin-top: 8px; line-height: 1.5; }
+
+/* ============================================================
+   PRICING SECTION
+   ============================================================ */
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.price-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px 24px;
+  text-align: center;
+  transition: box-shadow 0.25s, border-color 0.25s, transform 0.25s;
+  position: relative;
+}
+
+.price-card.featured {
+  border-color: var(--accent);
+  background: rgba(0,255,204,0.04);
+}
+
+.price-card.featured::after {
+  content: 'POPULAR';
+  position: absolute; top: 12px; right: 12px;
+  background: var(--accent);
+  color: #050a0f;
+  font-size: 10px;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.price-card:hover { box-shadow: var(--glow-soft); border-color: var(--accent); transform: translateY(-4px); }
+
+.price-sport-icon { font-size: 36px; margin-bottom: 12px; }
+
+.price-sport-name {
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+}
+
+.price-amount {
+  font-family: var(--font-display);
+  font-size: 48px;
+  color: var(--accent);
+  letter-spacing: 2px;
+}
+
+.price-unit { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+
+.price-features { list-style: none; text-align: left; }
+.price-features li {
+  font-size: 13px; color: var(--text-muted); padding: 5px 0;
+  display: flex; align-items: center; gap: 8px;
+}
+.price-features li::before { content: '✓'; color: var(--accent); font-weight: 700; }
+
+/* ============================================================
+   BOOKING FLOW
+   ============================================================ */
+.booking-flow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: start;
+}
+
+@media(max-width: 768px) { .booking-flow { grid-template-columns: 1fr; } }
+
+.booking-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+}
+
+.booking-panel h3 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: 2px;
+  margin-bottom: 24px;
+  display: flex; align-items: center; gap: 10px;
+}
+
+.step-num {
+  width: 28px; height: 28px;
+  background: var(--accent);
+  color: #050a0f;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-ui);
+}
+
+/* FORM STYLES */
+.form-group { margin-bottom: 18px; }
+
+.form-group label {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0,255,204,0.1);
+}
+
+.form-group select option { background: #0d1720; }
+
+.form-group textarea { resize: vertical; min-height: 80px; }
+
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.radio-group { display: flex; gap: 20px; flex-wrap: wrap; }
+
+.radio-item {
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.radio-item input[type="radio"] {
+  width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer;
+}
+
+.checkbox-item {
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.checkbox-item input[type="checkbox"] {
+  width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer;
+}
+
+.btn-submit {
+  width: 100%;
+  background: var(--accent);
+  color: #050a0f;
+  border: none;
+  border-radius: 8px;
+  padding: 14px;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  margin-top: 8px;
+}
+
+.btn-submit:hover { background: #00e6b8; transform: translateY(-1px); }
+
+.btn-reset {
+  width: 100%;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  margin-top: 8px;
+}
+
+.btn-reset:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ============================================================
+   SLOT GRID
+   ============================================================ */
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.slot-btn {
+  background: rgba(0,255,204,0.06);
+  border: 1px solid rgba(0,255,204,0.2);
+  color: var(--accent);
+  border-radius: 8px;
+  padding: 10px 6px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.1s;
+  text-align: center;
+}
+
+.slot-btn:hover { background: rgba(0,255,204,0.12); transform: scale(1.03); }
+.slot-btn.selected { background: var(--accent); color: #050a0f; border-color: var(--accent); }
+.slot-btn.booked {
+  background: rgba(255,68,102,0.08);
+  border-color: rgba(255,68,102,0.25);
+  color: #ff4466;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.slot-legend { display: flex; gap: 16px; margin-top: 14px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* SUMMARY CARD */
+.booking-summary {
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-top: 20px;
+}
+
+.booking-summary h4 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+  color: var(--accent);
+}
+
+.summary-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 14px;
+}
+
+.summary-row:last-child { border-bottom: none; }
+.summary-label { color: var(--text-muted); }
+.summary-value { font-weight: 600; font-family: var(--font-ui); }
+.summary-total { color: var(--accent); font-size: 18px; }
+
+/* ============================================================
+   FACILITIES
+   ============================================================ */
+.facilities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.facility-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 20px;
+  text-align: center;
+  transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+}
+
+.facility-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--glow-soft);
+  transform: translateY(-3px);
+}
+
+.facility-icon { font-size: 32px; margin-bottom: 12px; }
+.facility-name {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.facility-desc { font-size: 12px; color: var(--text-muted); }
+
+/* ============================================================
+   GALLERY
+   ============================================================ */
+.gallery-track-wrap { overflow: hidden; position: relative; }
+
+.gallery-track-wrap::before,
+.gallery-track-wrap::after {
+  content: '';
+  position: absolute; top: 0; bottom: 0; width: 80px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.gallery-track-wrap::before { left: 0; background: linear-gradient(to right, var(--bg-deep), transparent); }
+.gallery-track-wrap::after  { right: 0; background: linear-gradient(to left, var(--bg-deep), transparent); }
+
+.gallery-track {
+  display: flex; gap: 16px;
+  animation: galleryScroll 25s linear infinite;
+  width: max-content;
+}
+
+.gallery-track:hover { animation-play-state: paused; }
+
+@keyframes galleryScroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.gallery-img {
+  width: 280px; height: 190px;
+  object-fit: cover;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+  flex-shrink: 0;
+}
+
+.gallery-img:hover {
+  transform: scale(1.04);
+  box-shadow: var(--glow);
+  border-color: var(--accent);
+}
+
+/* LIGHTBOX */
+#lightbox {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.95);
+  z-index: 9000;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(8px);
+}
+
+#lightbox.open { display: flex; }
+
+#lightbox img {
+  max-width: 90vw;
+  max-height: 85vh;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: var(--glow);
+}
+
+.lb-close {
+  position: fixed; top: 20px; right: 24px;
+  width: 40px; height: 40px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  color: white;
+  transition: background 0.2s;
+}
+
+.lb-close:hover { background: rgba(255,68,102,0.4); }
+
+/* ============================================================
+   TESTIMONIALS
+   ============================================================ */
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.testimonial-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 24px;
+  transition: box-shadow 0.25s, border-color 0.25s;
+}
+
+.testimonial-card:hover {
+  box-shadow: var(--glow-soft);
+  border-color: rgba(0,255,204,0.3);
+}
+
+.stars { color: #ffd700; font-size: 16px; margin-bottom: 12px; }
+
+.testimonial-text {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.7;
+  margin-bottom: 16px;
+  font-style: italic;
+}
+
+.testimonial-author {
+  display: flex; align-items: center; gap: 12px;
+}
+
+.author-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: rgba(0,255,204,0.12);
+  border: 2px solid var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--accent);
+}
+
+.author-name { font-family: var(--font-ui); font-size: 14px; font-weight: 700; }
+.author-sport { font-size: 12px; color: var(--text-muted); }
+
+/* ============================================================
+   MY BOOKINGS PANEL
+   ============================================================ */
+.bookings-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+thead {
+  background: rgba(0,255,204,0.06);
+}
+
+th {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+td {
+  padding: 12px 16px;
+  color: var(--text-muted);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.badge-confirmed { background: rgba(0,255,204,0.12); color: var(--accent); border: 1px solid rgba(0,255,204,0.3); }
+.badge-sport { background: rgba(0,201,255,0.1); color: var(--accent2); border: 1px solid rgba(0,201,255,0.2); }
+
+.btn-del {
+  background: rgba(255,68,102,0.1);
+  border: 1px solid rgba(255,68,102,0.3);
+  color: #ff4466;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.btn-del:hover { background: rgba(255,68,102,0.25); }
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+}
+
+.empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; }
+
+/* ============================================================
+   ADMIN SECTION
+   ============================================================ */
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.admin-stat {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+}
+
+.admin-stat-num {
+  font-family: var(--font-display);
+  font-size: 36px;
+  color: var(--accent);
+  letter-spacing: 2px;
+}
+
+.admin-stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+/* ============================================================
+   CONTACT SECTION
+   ============================================================ */
+.contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: start;
+}
+
+@media(max-width: 768px) { .contact-grid { grid-template-columns: 1fr; } }
+
+.contact-info-item {
+  display: flex; align-items: flex-start; gap: 16px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.contact-info-item:last-child { border-bottom: none; }
+
+.contact-icon {
+  width: 44px; height: 44px;
+  background: rgba(0,255,204,0.08);
+  border: 1px solid rgba(0,255,204,0.2);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.contact-label { font-family: var(--font-ui); font-size: 12px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
+.contact-value { font-size: 15px; font-weight: 500; margin-top: 2px; }
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+footer {
+  background: rgba(0,0,0,0.6);
+  border-top: 1px solid var(--border);
+  padding: 32px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.footer-brand {
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 3px;
+  color: var(--accent);
+}
+
+.footer-credits { font-size: 13px; color: var(--text-muted); }
+.footer-credits span { color: var(--accent); }
+
+/* ============================================================
+   TOAST / NOTIFICATIONS
+   ============================================================ */
+#toastContainer {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  z-index: 9999;
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+.toast {
+  background: var(--bg-card);
+  border-radius: 10px;
+  padding: 14px 18px;
+  min-width: 260px;
+  display: flex; align-items: center; gap: 12px;
+  border-left: 4px solid var(--accent);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  animation: toastIn 0.35s ease;
+  font-size: 14px;
+}
+
+.toast.error { border-left-color: #ff4466; }
+.toast.success { border-left-color: var(--accent); }
+
+.toast-icon { font-size: 18px; }
+.toast-msg { flex: 1; }
+.toast-title { font-family: var(--font-ui); font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+.toast-body { font-size: 12px; color: var(--text-muted); }
+
+@keyframes toastIn {
+  from { opacity:0; transform: translateX(40px); }
+  to   { opacity:1; transform: translateX(0); }
+}
+
+/* ============================================================
+   PAYMENT MODAL
+   ============================================================ */
+#paymentOverlay {
+  position: fixed; inset: 0;
+  background: rgba(5,10,15,0.92);
+  display: none; align-items: center; justify-content: center;
+  z-index: 6000;
+  backdrop-filter: blur(8px);
+}
+
+#paymentOverlay.open { display: flex; }
+
+.payment-box {
+  width: 440px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 36px 32px;
+  position: relative;
+  box-shadow: var(--glow);
+  animation: slideUp 0.4s ease;
+}
+
+.payment-box h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  letter-spacing: 2px;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.payment-close {
+  position: absolute; top: 16px; right: 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 14px;
+  transition: background 0.2s;
+}
+
+.payment-close:hover { background: rgba(255,68,102,0.2); color: #ff4466; }
+
+.payment-methods {
+  display: flex; gap: 10px; margin: 20px 0;
+}
+
+.pay-method {
+  flex: 1; padding: 10px; background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border); border-radius: 8px;
+  text-align: center; cursor: pointer; font-size: 12px;
+  font-family: var(--font-ui); font-weight: 600;
+  transition: border-color 0.2s, background 0.2s;
+  color: var(--text-muted);
+}
+
+.pay-method.active {
+  border-color: var(--accent);
+  background: rgba(0,255,204,0.06);
+  color: var(--accent);
+}
+
+.pay-icon { font-size: 24px; margin-bottom: 4px; }
+
+.upi-input { display: flex; gap: 10px; align-items: center; }
+.upi-input input { flex: 1; }
+.upi-verify {
+  background: var(--accent); color: #050a0f;
+  border: none; border-radius: 8px; padding: 12px 16px;
+  font-family: var(--font-ui); font-weight: 700; font-size: 13px;
+  cursor: pointer; white-space: nowrap;
+  transition: background 0.2s;
+}
+.upi-verify:hover { background: #00e6b8; }
+
+.pay-amount-row {
+  display: flex; justify-content: space-between; align-items: center;
+  background: rgba(0,255,204,0.06);
+  border: 1px solid rgba(0,255,204,0.2);
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+
+.pay-amount-label { font-size: 13px; color: var(--text-muted); }
+.pay-amount-value { font-family: var(--font-display); font-size: 28px; color: var(--accent); }
+
+/* ============================================================
+   CONFIRMATION CARD
+   ============================================================ */
+#confirmationCard {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(5,10,15,0.92);
+  align-items: center; justify-content: center;
+  z-index: 7000;
+  backdrop-filter: blur(8px);
+}
+
+#confirmationCard.open { display: flex; }
+
+.confirm-box {
+  width: 400px;
+  background: var(--bg-card);
+  border: 1px solid var(--accent);
+  border-radius: 16px;
+  padding: 40px 32px;
+  text-align: center;
+  box-shadow: var(--glow);
+  animation: slideUp 0.4s ease;
+}
+
+.confirm-check {
+  width: 72px; height: 72px;
+  background: rgba(0,255,204,0.12);
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+  margin: 0 auto 20px;
+  animation: popIn 0.5s ease 0.2s both;
+}
+
+@keyframes popIn {
+  from { transform: scale(0); }
+  to   { transform: scale(1); }
+}
+
+.confirm-box h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  letter-spacing: 2px;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.confirm-box p { font-size: 14px; color: var(--text-muted); margin-bottom: 24px; }
+
+.booking-id {
+  background: rgba(0,255,204,0.06);
+  border: 1px solid rgba(0,255,204,0.2);
+  border-radius: 8px;
+  padding: 12px;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 2px;
+  margin-bottom: 24px;
+}
+
+/* ============================================================
+   RESPONSIVE NAV
+   ============================================================ */
+@media(max-width: 900px) {
+  #topbar { padding: 0 20px; }
+  .topnav { display: none; }
+  .section { padding: 60px 20px; }
+  footer { flex-direction: column; text-align: center; }
+}
+
+/* ============================================================
+   TAB SYSTEM (for sections)
+   ============================================================ */
+.tab-bar {
+  display: flex; gap: 6px; margin-bottom: 32px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px;
+  width: fit-content;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 18px;
+  border-radius: 7px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.tab-btn.active {
+  background: var(--accent);
+  color: #050a0f;
+}
+
+/* ============================================================
+   PROGRESS BAR (booking steps)
+   ============================================================ */
+.steps-bar {
+  display: flex; align-items: center; margin-bottom: 32px;
+}
+
+.step-item {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.step-item.active { color: var(--accent); }
+.step-item.done   { color: rgba(0,255,204,0.5); }
+
+.step-circle {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+}
+
+.step-item.active .step-circle {
+  border-color: var(--accent);
+  background: rgba(0,255,204,0.12);
+  color: var(--accent);
+}
+
+.step-item.done .step-circle {
+  border-color: rgba(0,255,204,0.4);
+  color: rgba(0,255,204,0.6);
+}
+
+.step-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+  margin: 0 10px;
+}
+
+/* ============================================================
+   SCROLL TO TOP
+   ============================================================ */
+#scrollTop {
+  position: fixed; bottom: 80px; right: 24px;
+  width: 44px; height: 44px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 18px;
+  z-index: 900;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+#scrollTop.show { opacity: 1; pointer-events: all; }
+#scrollTop:hover { border-color: var(--accent); box-shadow: var(--glow-soft); }
+
+</style>
+</head>
+<body>
+
+<!-- ===================== AUTH OVERLAY ===================== -->
+<div id="authOverlay">
+  <div id="signupPanel" class="auth-panel">
+    <h2>JOIN SIGMA</h2>
+    <p class="sub">Create your account to book turf slots</p>
+    <input type="text" id="su_name" placeholder="Full Name">
+    <input type="email" id="su_email" placeholder="Email Address">
+    <input type="password" id="su_pass" placeholder="Create Password">
+    <button class="btn-primary" onclick="doSignup()">CREATE ACCOUNT</button>
+    <div class="auth-switch">Already have an account? <span onclick="switchToLogin()">Login here</span></div>
+    <div class="auth-msg" id="suMsg"></div>
+  </div>
+  <div id="loginPanel" class="auth-panel" style="display:none;">
+    <h2>WELCOME BACK</h2>
+    <p class="sub">Login to manage your bookings</p>
+    <input type="email" id="li_email" placeholder="Email Address">
+    <input type="password" id="li_pass" placeholder="Password">
+    <button class="btn-primary" onclick="doLogin()">LOGIN</button>
+    <div class="auth-switch">New here? <span onclick="switchToSignup()">Create account</span></div>
+    <div class="auth-msg" id="liMsg"></div>
+  </div>
+</div>
+
+<!-- ===================== MAIN SITE ===================== -->
+<div id="mainSite">
+
+  <!-- TOPBAR -->
+  <header id="topbar">
+    <div class="logo-text"><div class="logo-dot"></div>SIGMA ARENA</div>
+    <nav class="topnav">
+      <a href="#about">About</a>
+      <a href="#sports">Sports</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#gallery">Gallery</a>
+      <a href="#booking">Book Now</a>
+      <a href="#mybookings">My Bookings</a>
+      <a href="#contact">Contact</a>
+      <span id="userGreet">👤 Guest</span>
+      <button class="btn-logout" onclick="doLogout()">Logout</button>
+    </nav>
+  </header>
+
+  <!-- HERO -->
+  <section id="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-content">
+      <div class="hero-badge">⚽ BOOK YOUR SLOT TODAY</div>
+      <h1 class="hero-title">SIGMA<br><span class="hl">ARENA</span></h1>
+      <p class="hero-sub">Football • Cricket • Badminton • Midnight Matches<br>Professional turf. Smart booking. Anytime, anywhere.</p>
+      <div class="hero-ctas">
+        <a href="#booking" class="cta-main">BOOK A SLOT</a>
+        <a href="#about" class="cta-ghost">EXPLORE →</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-item"><div class="stat-num">3+</div><div class="stat-label">Sports</div></div>
+        <div class="stat-item"><div class="stat-num">24H</div><div class="stat-label">Availability</div></div>
+        <div class="stat-item"><div class="stat-num">500+</div><div class="stat-label">Bookings</div></div>
+        <div class="stat-item"><div class="stat-num">4.9★</div><div class="stat-label">Rating</div></div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ABOUT -->
+  <section id="about" class="section">
+    <div class="section-label">Who We Are</div>
+    <h2 class="section-title">ABOUT SIGMA ARENA</h2>
+    <p class="section-sub">
+      Sigma Arena is a state-of-the-art sports facility built for players who take their game seriously.
+      Our smart booking system lets you reserve slots online in seconds — no calls, no queues.
+      With FIFA-standard turf, blazing floodlights, and midnight slots, we're open whenever you are.
+    </p>
+    <div class="facilities-grid">
+      <div class="facility-card"><div class="facility-icon">🏟️</div><div class="facility-name">FIFA Standard Turf</div><div class="facility-desc">International quality artificial surface</div></div>
+      <div class="facility-card"><div class="facility-icon">💡</div><div class="facility-name">Flood Lights</div><div class="facility-desc">High-power LED lighting for night matches</div></div>
+      <div class="facility-card"><div class="facility-icon">📱</div><div class="facility-name">Online Booking</div><div class="facility-desc">Instant slot reservation 24/7</div></div>
+      <div class="facility-card"><div class="facility-icon">🅿️</div><div class="facility-name">Free Parking</div><div class="facility-desc">Spacious parking for all players</div></div>
+      <div class="facility-card"><div class="facility-icon">🚿</div><div class="facility-name">Changing Rooms</div><div class="facility-desc">Clean, modern facilities</div></div>
+      <div class="facility-card"><div class="facility-icon">🔒</div><div class="facility-name">24/7 Security</div><div class="facility-desc">CCTV surveillance round the clock</div></div>
+      <div class="facility-card"><div class="facility-icon">🥤</div><div class="facility-name">Refreshments</div><div class="facility-desc">Sports drinks & snacks available</div></div>
+      <div class="facility-card"><div class="facility-icon">🌙</div><div class="facility-name">Midnight Slots</div><div class="facility-desc">Late night matches welcome</div></div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SPORTS -->
+  <section id="sports" class="section">
+    <div class="section-label">Choose Your Game</div>
+    <h2 class="section-title">OUR SPORTS</h2>
+    <p class="section-sub">Pick a sport to pre-select it in the booking form below.</p>
+    <div class="sports-grid">
+      <div class="sport-card" onclick="selectSportCard(this,'Football')">
+        <div class="sport-icon">⚽</div>
+        <div class="sport-name">FOOTBALL</div>
+        <div class="sport-price">₹1,500 / hour</div>
+        <div class="sport-desc">11-a-side or 5-a-side matches on our FIFA-quality turf.</div>
+      </div>
+      <div class="sport-card" onclick="selectSportCard(this,'Cricket')">
+        <div class="sport-icon">🏏</div>
+        <div class="sport-name">CRICKET</div>
+        <div class="sport-price">₹2,000 / hour</div>
+        <div class="sport-desc">Professionally maintained pitch with batting nets and crease marking.</div>
+      </div>
+      <div class="sport-card" onclick="selectSportCard(this,'Badminton')">
+        <div class="sport-icon">🏸</div>
+        <div class="sport-name">BADMINTON</div>
+        <div class="sport-price">₹800 / hour</div>
+        <div class="sport-desc">Indoor courts with non-slip flooring and shuttle feeder service.</div>
+      </div>
+      <div class="sport-card" onclick="selectSportCard(this,'Midnight')">
+        <div class="sport-icon">🌙</div>
+        <div class="sport-name">MIDNIGHT SLOT</div>
+        <div class="sport-price">₹2,500 / hour</div>
+        <div class="sport-desc">Special late-night matches with full lighting and security coverage.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- PRICING -->
+  <section id="pricing" class="section">
+    <div class="section-label">Transparent Pricing</div>
+    <h2 class="section-title">PRICING PLANS</h2>
+    <p class="section-sub">All slots include changing rooms, parking and security. No hidden charges.</p>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="price-sport-icon">⚽</div>
+        <div class="price-sport-name">FOOTBALL</div>
+        <div class="price-amount">₹1500</div>
+        <div class="price-unit">per hour</div>
+        <ul class="price-features">
+          <li>FIFA standard turf</li>
+          <li>Goal posts & bibs</li>
+          <li>Flood-lit arena</li>
+          <li>Free parking</li>
+        </ul>
+      </div>
+      <div class="price-card featured">
+        <div class="price-sport-icon">🏏</div>
+        <div class="price-sport-name">CRICKET</div>
+        <div class="price-amount">₹2000</div>
+        <div class="price-unit">per hour</div>
+        <ul class="price-features">
+          <li>Prepared pitch</li>
+          <li>Batting nets</li>
+          <li>Stumps & bails</li>
+          <li>Scoreboard access</li>
+        </ul>
+      </div>
+      <div class="price-card">
+        <div class="price-sport-icon">🏸</div>
+        <div class="price-sport-name">BADMINTON</div>
+        <div class="price-amount">₹800</div>
+        <div class="price-unit">per hour</div>
+        <ul class="price-features">
+          <li>Indoor court</li>
+          <li>Nets & shuttles</li>
+          <li>Anti-slip floor</li>
+          <li>Air cooled</li>
+        </ul>
+      </div>
+      <div class="price-card">
+        <div class="price-sport-icon">🌙</div>
+        <div class="price-sport-name">MIDNIGHT</div>
+        <div class="price-amount">₹2500</div>
+        <div class="price-unit">per hour</div>
+        <ul class="price-features">
+          <li>10 PM – 5 AM slots</li>
+          <li>Full flood lighting</li>
+          <li>Security on-site</li>
+          <li>Refreshments available</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- GALLERY -->
+  <section id="gallery" class="section">
+    <div class="section-label">Our Facility</div>
+    <h2 class="section-title">GALLERY</h2>
+    <p class="section-sub">Hover to pause. Click any image to view full screen.</p>
+    <div class="gallery-track-wrap">
+      <div class="gallery-track" id="galleryTrack">
+        <!-- images duplicated in JS for infinite loop -->
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- BOOKING FORM -->
+  <section id="booking" class="section">
+    <div class="section-label">Reserve Your Slot</div>
+    <h2 class="section-title">BOOK NOW</h2>
+
+    <!-- Progress steps -->
+    <div class="steps-bar">
+      <div class="step-item active" id="step1Ind"><div class="step-circle">1</div>Your Details</div>
+      <div class="step-line"></div>
+      <div class="step-item" id="step2Ind"><div class="step-circle">2</div>Choose Slot</div>
+      <div class="step-line"></div>
+      <div class="step-item" id="step3Ind"><div class="step-circle">3</div>Payment</div>
+    </div>
+
+    <div class="booking-flow">
+      <!-- LEFT: FORM -->
+      <div class="booking-panel">
+        <h3><div class="step-num">1</div>REGISTRATION DETAILS</h3>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="f_name" placeholder="Enter full name">
+          </div>
+          <div class="form-group">
+            <label>Phone *</label>
+            <input type="tel" id="f_phone" placeholder="10-digit number">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Email Address *</label>
+          <input type="email" id="f_email" placeholder="your@email.com">
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Password *</label>
+            <input type="password" id="f_pass" placeholder="Create password">
+          </div>
+          <div class="form-group">
+            <label>Confirm Password *</label>
+            <input type="password" id="f_cpass" placeholder="Repeat password">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Gender</label>
+          <div class="radio-group">
+            <label class="radio-item"><input type="radio" name="gender" value="Male"> Male</label>
+            <label class="radio-item"><input type="radio" name="gender" value="Female"> Female</label>
+            <label class="radio-item"><input type="radio" name="gender" value="Other"> Other</label>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Date of Birth</label>
+            <input type="date" id="f_dob">
+          </div>
+          <div class="form-group">
+            <label>Preferred Sport *</label>
+            <select id="f_sport" onchange="updateSummary()">
+              <option value="">Select sport</option>
+              <option value="Football">⚽ Football — ₹1500/hr</option>
+              <option value="Cricket">🏏 Cricket — ₹2000/hr</option>
+              <option value="Badminton">🏸 Badminton — ₹800/hr</option>
+              <option value="Midnight">🌙 Midnight — ₹2500/hr</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Booking Date *</label>
+          <input type="date" id="f_date" onchange="renderSlots()">
+        </div>
+
+        <div class="form-group">
+          <label>Address</label>
+          <textarea id="f_address" placeholder="Your city / locality"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-item">
+            <input type="checkbox" id="f_terms">
+            I agree to the Terms & Conditions and Cancellation Policy
+          </label>
+        </div>
+
+        <button class="btn-submit" onclick="submitBooking()">PROCEED TO PAYMENT →</button>
+        <button type="button" class="btn-reset" onclick="resetForm()">RESET FORM</button>
+      </div>
+
+      <!-- RIGHT: SLOT PICKER + SUMMARY -->
+      <div>
+        <div class="booking-panel">
+          <h3><div class="step-num">2</div>SELECT TIME SLOT</h3>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Choose a date first, then pick your slot.</p>
+          <div class="slot-grid" id="slotGrid">
+            <div style="grid-column:1/-1;text-align:center;color:var(--text-muted);font-size:13px;padding:20px 0;">
+              ← Select a date to see available slots
+            </div>
+          </div>
+          <div class="slot-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:rgba(0,255,204,0.5)"></div>Available</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Selected</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ff4466"></div>Booked</div>
+          </div>
+        </div>
+
+        <div class="booking-summary">
+          <h4>BOOKING SUMMARY</h4>
+          <div class="summary-row"><span class="summary-label">Sport</span><span class="summary-value" id="sum_sport">—</span></div>
+          <div class="summary-row"><span class="summary-label">Date</span><span class="summary-value" id="sum_date">—</span></div>
+          <div class="summary-row"><span class="summary-label">Time Slot</span><span class="summary-value" id="sum_slot">—</span></div>
+          <div class="summary-row"><span class="summary-label">Duration</span><span class="summary-value">1 Hour</span></div>
+          <div class="summary-row"><span class="summary-label">TOTAL</span><span class="summary-value summary-total" id="sum_total">₹ —</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- MY BOOKINGS -->
+  <section id="mybookings" class="section">
+    <div class="section-label">Your History</div>
+    <h2 class="section-title">MY BOOKINGS</h2>
+    <p class="section-sub">View and manage all your slot reservations.</p>
+    <div class="bookings-table-wrap" id="myBookingsWrap">
+      <div class="empty-state"><div class="empty-icon">📋</div><p>No bookings yet. Reserve your first slot above!</p></div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ADMIN DASHBOARD -->
+  <section id="admin" class="section">
+    <div class="section-label">Admin Panel</div>
+    <h2 class="section-title">ADMIN DASHBOARD</h2>
+    <p class="section-sub">Overview of all bookings across all users.</p>
+
+    <div class="admin-stats" id="adminStats">
+      <div class="admin-stat"><div class="admin-stat-num" id="aTotal">0</div><div class="admin-stat-label">Total Bookings</div></div>
+      <div class="admin-stat"><div class="admin-stat-num" id="aFootball">0</div><div class="admin-stat-label">Football Slots</div></div>
+      <div class="admin-stat"><div class="admin-stat-num" id="aCricket">0</div><div class="admin-stat-label">Cricket Slots</div></div>
+      <div class="admin-stat"><div class="admin-stat-num" id="aBadminton">0</div><div class="admin-stat-label">Badminton Slots</div></div>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="filterAdmin('all',this)">All Bookings</button>
+      <button class="tab-btn" onclick="filterAdmin('Football',this)">Football</button>
+      <button class="tab-btn" onclick="filterAdmin('Cricket',this)">Cricket</button>
+      <button class="tab-btn" onclick="filterAdmin('Badminton',this)">Badminton</button>
+    </div>
+
+    <div class="bookings-table-wrap" id="adminTableWrap">
+      <div class="empty-state"><div class="empty-icon">📊</div><p>No bookings in the system yet.</p></div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- TESTIMONIALS -->
+  <section id="testimonials" class="section">
+    <div class="section-label">Player Reviews</div>
+    <h2 class="section-title">WHAT PLAYERS SAY</h2>
+    <p class="section-sub">Trusted by hundreds of players across the region.</p>
+    <div class="testimonials-grid">
+      <div class="testimonial-card">
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">"The best turf in town. Booking online took less than 2 minutes and the slot was ready when we arrived. The midnight session was absolutely incredible!"</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">A</div>
+          <div><div class="author-name">Arjun Krishnan</div><div class="author-sport">Football Player</div></div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">"Sigma Arena's badminton courts are top-notch. Non-slip flooring, great lighting and the staff is always helpful. Will definitely be coming back every week!"</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">P</div>
+          <div><div class="author-name">Priya Nair</div><div class="author-sport">Badminton Enthusiast</div></div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">"Cricket pitch is well-maintained. The booking confirmation system is smooth and the confirmation is instant. Perfect for our weekend club matches."</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">R</div>
+          <div><div class="author-name">Rajesh Kumar</div><div class="author-sport">Cricket Club Captain</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- CONTACT -->
+  <section id="contact" class="section">
+    <div class="section-label">Get In Touch</div>
+    <h2 class="section-title">CONTACT US</h2>
+    <div class="contact-grid">
+      <div>
+        <div class="contact-info-item">
+          <div class="contact-icon">📧</div>
+          <div>
+            <div class="contact-label">Email</div>
+            <div class="contact-value">enquire@sigmaarena.com</div>
+          </div>
+        </div>
+        <div class="contact-info-item">
+          <div class="contact-icon">📞</div>
+          <div>
+            <div class="contact-label">Phone</div>
+            <div class="contact-value">+91 98765 43210</div>
+          </div>
+        </div>
+        <div class="contact-info-item">
+          <div class="contact-icon">📍</div>
+          <div>
+            <div class="contact-label">Location</div>
+            <div class="contact-value">Sigma Sports Complex, Nagercoil, Tamil Nadu 629001</div>
+          </div>
+        </div>
+        <div class="contact-info-item">
+          <div class="contact-icon">🕐</div>
+          <div>
+            <div class="contact-label">Working Hours</div>
+            <div class="contact-value">Open 24 Hours · 7 Days a Week</div>
+          </div>
+        </div>
+      </div>
+      <div class="booking-panel">
+        <h3>SEND A MESSAGE</h3>
+        <div class="form-group"><label>Name</label><input type="text" id="c_name" placeholder="Your name"></div>
+        <div class="form-group"><label>Email</label><input type="email" id="c_email" placeholder="your@email.com"></div>
+        <div class="form-group"><label>Message</label><textarea id="c_msg" style="min-height:120px;" placeholder="Ask about slots, facilities, pricing..."></textarea></div>
+        <button class="btn-submit" onclick="sendMessage()">SEND MESSAGE</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-brand">⚡ SIGMA ARENA</div>
+    <div class="footer-credits">© 2026 Sigma Arena · Designed by <span>Bhuvaneshware JK</span> · Turf Booking System</div>
+  </footer>
+
+</div><!-- /mainSite -->
+
+<!-- PAYMENT OVERLAY -->
+<div id="paymentOverlay">
+  <div class="payment-box">
+    <div class="payment-close" onclick="closePayment()">✕</div>
+    <h2>PAYMENT</h2>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Secure checkout · Booking ID generated on success</p>
+    <div class="pay-amount-row">
+      <span class="pay-amount-label">Amount Due</span>
+      <span class="pay-amount-value" id="payAmount">₹0</span>
+    </div>
+    <div class="payment-methods">
+      <div class="pay-method active" onclick="setPayMethod(this,'upi')"><div class="pay-icon">📱</div>UPI</div>
+      <div class="pay-method" onclick="setPayMethod(this,'card')"><div class="pay-icon">💳</div>Card</div>
+      <div class="pay-method" onclick="setPayMethod(this,'cash')"><div class="pay-icon">💵</div>Cash</div>
+    </div>
+    <div id="payUpi">
+      <div class="form-group"><label>UPI ID</label>
+        <div class="upi-input">
+          <input type="text" id="upiId" placeholder="yourname@upi">
+          <button class="upi-verify" onclick="verifyUpi()">VERIFY</button>
+        </div>
+      </div>
+    </div>
+    <div id="payCard" style="display:none;">
+      <div class="form-group"><label>Card Number</label><input type="text" id="cardNum" placeholder="XXXX XXXX XXXX XXXX" maxlength="19" oninput="formatCard(this)"></div>
+      <div class="form-row-2">
+        <div class="form-group"><label>Expiry</label><input type="text" placeholder="MM/YY" maxlength="5"></div>
+        <div class="form-group"><label>CVV</label><input type="password" placeholder="•••" maxlength="3"></div>
+      </div>
+      <div class="form-group"><label>Cardholder Name</label><input type="text" placeholder="Name on card"></div>
+    </div>
+    <div id="payCash" style="display:none;">
+      <p style="font-size:14px;color:var(--text-muted);padding:16px;background:rgba(0,255,204,0.04);border:1px solid rgba(0,255,204,0.15);border-radius:8px;">
+        💵 Pay cash at the reception desk when you arrive. Show your Booking ID to the staff. Your slot will be reserved for <strong style="color:var(--accent)">30 minutes</strong>.
+      </p>
+    </div>
+    <button class="btn-submit" onclick="confirmPayment()" style="margin-top:20px;">CONFIRM & PAY</button>
+  </div>
+</div>
+
+<!-- CONFIRMATION CARD -->
+<div id="confirmationCard">
+  <div class="confirm-box">
+    <div class="confirm-check">✅</div>
+    <h2>BOOKING CONFIRMED!</h2>
+    <p>Your slot has been successfully reserved. Check your email for details.</p>
+    <div class="booking-id" id="confirmBookingId">SA-000000</div>
+    <div class="summary-row" style="justify-content:center;gap:8px;font-size:14px;color:var(--text-muted);">
+      <span id="confSport"></span> · <span id="confDate"></span> · <span id="confSlot"></span>
+    </div>
+    <button class="btn-submit" style="margin-top:24px;" onclick="closeConfirm()">DONE →</button>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" onclick="closeLightbox()">
+  <div class="lb-close" onclick="closeLightbox()">✕</div>
+  <img id="lbImg" src="" alt="">
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toastContainer"></div>
+
+<!-- SCROLL TO TOP -->
+<div id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</div>
+
+
+<script>
+/* ============================================================
+   DATA
+   ============================================================ */
+const PRICES = { Football:1500, Cricket:2000, Badminton:800, Midnight:2500 };
+
+const ALL_SLOTS = [
+  '6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM',
+  '12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM',
+  '6:00 PM','7:00 PM','8:00 PM','9:00 PM','10:00 PM','11:00 PM',
+  '12:00 AM','1:00 AM','2:00 AM','3:00 AM','4:00 AM','5:00 AM'
+];
+
+let selectedSlot = null;
+let pendingBooking = null;
+let currentPayMethod = 'upi';
+let adminFilter = 'all';
+
+/* ============================================================
+   AUTH
+   ============================================================ */
+window.onload = function(){
+  const loggedIn = localStorage.getItem('sa_loggedIn');
+  if(loggedIn === 'true'){
+    hideAuth();
+    updateGreet();
+  } else {
+    showAuth();
+  }
+  buildGallery();
+  renderMyBookings();
+  renderAdmin();
+  setMinDate();
+  window.addEventListener('scroll', onScroll);
+};
+
+function showAuth(){ document.getElementById('authOverlay').style.display='flex'; document.getElementById('mainSite').classList.add('site-blur'); }
+function hideAuth(){ document.getElementById('authOverlay').style.display='none'; document.getElementById('mainSite').classList.remove('site-blur'); }
+
+function switchToLogin(){ document.getElementById('signupPanel').style.display='none'; document.getElementById('loginPanel').style.display='block'; clearMsgs(); }
+function switchToSignup(){ document.getElementById('loginPanel').style.display='none'; document.getElementById('signupPanel').style.display='block'; clearMsgs(); }
+function clearMsgs(){ document.getElementById('suMsg').textContent=''; document.getElementById('liMsg').textContent=''; }
+
+function doSignup(){
+  const name  = document.getElementById('su_name').value.trim();
+  const email = document.getElementById('su_email').value.trim();
+  const pass  = document.getElementById('su_pass').value;
+  const msg   = document.getElementById('suMsg');
+  if(!name||!email||!pass){ msg.textContent='Please fill all fields.'; return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ msg.textContent='Invalid email format.'; return; }
+  if(pass.length<6){ msg.textContent='Password must be at least 6 characters.'; return; }
+  const users = JSON.parse(localStorage.getItem('sa_users')||'{}');
+  if(users[email]){ msg.textContent='Account already exists. Login instead.'; return; }
+  users[email] = { name, pass };
+  localStorage.setItem('sa_users', JSON.stringify(users));
+  msg.className='auth-msg success';
+  msg.textContent='✅ Registered successfully! Logging you in...';
+  setTimeout(()=>{ setLoggedIn(email,name); }, 900);
+}
+
+function doLogin(){
+  const email = document.getElementById('li_email').value.trim();
+  const pass  = document.getElementById('li_pass').value;
+  const msg   = document.getElementById('liMsg');
+  const users = JSON.parse(localStorage.getItem('sa_users')||'{}');
+  if(!users[email] || users[email].pass !== pass){ msg.textContent='Invalid email or password.'; return; }
+  setLoggedIn(email, users[email].name);
+}
+
+function setLoggedIn(email, name){
+  localStorage.setItem('sa_loggedIn','true');
+  localStorage.setItem('sa_currentUser', email);
+  localStorage.setItem('sa_currentName', name);
+  hideAuth();
+  updateGreet();
+  renderMyBookings();
+  renderAdmin();
+  showToast('success','Welcome back!',`Logged in as ${name}`,'👋');
+}
+
+function doLogout(){
+  localStorage.setItem('sa_loggedIn','false');
+  localStorage.removeItem('sa_currentUser');
+  localStorage.removeItem('sa_currentName');
+  showAuth();
+  document.getElementById('userGreet').textContent='👤 Guest';
+}
+
+function updateGreet(){
+  const name = localStorage.getItem('sa_currentName') || 'Player';
+  document.getElementById('userGreet').textContent = `👤 ${name}`;
+}
+
+/* ============================================================
+   SPORT CARD SELECTION
+   ============================================================ */
+function selectSportCard(el, sport){
+  document.querySelectorAll('.sport-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('f_sport').value = sport;
+  updateSummary();
+  document.getElementById('booking').scrollIntoView({behavior:'smooth'});
+}
+
+/* ============================================================
+   SLOT RENDERING
+   ============================================================ */
+function setMinDate(){
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('f_date').min = today;
+}
+
+function renderSlots(){
+  const date = document.getElementById('f_date').value;
+  const grid = document.getElementById('slotGrid');
+  if(!date){ grid.innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--text-muted);font-size:13px;padding:20px 0;">← Select a date to see available slots</div>'; return; }
+  selectedSlot = null;
+  updateSummary();
+  const bookings = JSON.parse(localStorage.getItem('sa_bookings')||'[]');
+  const bookedOnDate = bookings.filter(b=>b.date===date).map(b=>b.slot);
+  grid.innerHTML = '';
+  ALL_SLOTS.forEach(slot=>{
+    const btn = document.createElement('button');
+    btn.className = 'slot-btn';
+    btn.textContent = slot;
+    if(bookedOnDate.includes(slot)){
+      btn.classList.add('booked');
+      btn.disabled = true;
+      btn.title = 'This slot is already booked';
+    } else {
+      btn.onclick = ()=> pickSlot(btn, slot);
+    }
+    grid.appendChild(btn);
+  });
+}
+
+function pickSlot(btn, slot){
+  document.querySelectorAll('.slot-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedSlot = slot;
+  updateSummary();
+}
+
+/* ============================================================
+   BOOKING SUMMARY
+   ============================================================ */
+function updateSummary(){
+  const sport = document.getElementById('f_sport').value;
+  const date  = document.getElementById('f_date').value;
+  document.getElementById('sum_sport').textContent = sport || '—';
+  document.getElementById('sum_date').textContent  = date  || '—';
+  document.getElementById('sum_slot').textContent  = selectedSlot || '—';
+  document.getElementById('sum_total').textContent = sport ? '₹ '+PRICES[sport].toLocaleString('en-IN') : '₹ —';
+}
+
+/* ============================================================
+   FORM SUBMISSION
+   ============================================================ */
+function submitBooking(){
+  const name  = document.getElementById('f_name').value.trim();
+  const phone = document.getElementById('f_phone').value.trim();
+  const email = document.getElementById('f_email').value.trim();
+  const pass  = document.getElementById('f_pass').value;
+  const cpass = document.getElementById('f_cpass').value;
+  const sport = document.getElementById('f_sport').value;
+  const date  = document.getElementById('f_date').value;
+  const terms = document.getElementById('f_terms').checked;
+
+  if(!name)                         { showToast('error','Missing Field','Please enter your full name.','⚠️'); return; }
+  if(!/^\d{10}$/.test(phone))       { showToast('error','Invalid Phone','Enter a valid 10-digit phone number.','⚠️'); return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('error','Invalid Email','Enter a valid email address.','⚠️'); return; }
+  if(pass.length < 6)               { showToast('error','Weak Password','Password must be at least 6 characters.','⚠️'); return; }
+  if(pass !== cpass)                { showToast('error','Password Mismatch','Passwords do not match.','⚠️'); return; }
+  if(!sport)                        { showToast('error','Select Sport','Please choose a sport.','⚠️'); return; }
+  if(!date)                         { showToast('error','Select Date','Please pick a booking date.','⚠️'); return; }
+  if(!selectedSlot)                 { showToast('error','Select Slot','Please choose a time slot.','⚠️'); return; }
+  if(!terms)                        { showToast('error','Terms Required','Please accept the terms & conditions.','⚠️'); return; }
+
+  pendingBooking = { name, phone, email, sport, date, slot:selectedSlot, amount:PRICES[sport] };
+  document.getElementById('payAmount').textContent = '₹'+PRICES[sport].toLocaleString('en-IN');
+  document.getElementById('paymentOverlay').classList.add('open');
+  setStepActive(3);
+}
+
+function resetForm(){
+  ['f_name','f_phone','f_email','f_pass','f_cpass','f_address','f_dob'].forEach(id=> document.getElementById(id).value='');
+  document.getElementById('f_sport').value='';
+  document.getElementById('f_date').value='';
+  document.getElementById('f_terms').checked=false;
+  document.querySelectorAll('input[name="gender"]').forEach(r=>r.checked=false);
+  selectedSlot = null;
+  document.getElementById('slotGrid').innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--text-muted);font-size:13px;padding:20px 0;">← Select a date to see available slots</div>';
+  updateSummary();
+  setStepActive(1);
+}
+
+/* ============================================================
+   PAYMENT
+   ============================================================ */
+function setPayMethod(el, method){
+  currentPayMethod = method;
+  document.querySelectorAll('.pay-method').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('payUpi').style.display  = method==='upi'  ? 'block':'none';
+  document.getElementById('payCard').style.display = method==='card' ? 'block':'none';
+  document.getElementById('payCash').style.display = method==='cash' ? 'block':'none';
+}
+
+function verifyUpi(){
+  const upi = document.getElementById('upiId').value.trim();
+  if(!upi || !upi.includes('@')){ showToast('error','Invalid UPI','Enter a valid UPI ID (e.g. name@upi).','⚠️'); return; }
+  showToast('success','UPI Verified','Your UPI ID is verified and ready!','✅');
+}
+
+function formatCard(el){
+  let v = el.value.replace(/\D/g,'').substring(0,16);
+  el.value = v.replace(/(.{4})/g,'$1 ').trim();
+}
+
+function confirmPayment(){
+  if(!pendingBooking) return;
+  const bookings = JSON.parse(localStorage.getItem('sa_bookings')||'[]');
+  const id = 'SA-' + Date.now().toString().slice(-6);
+  const userEmail = localStorage.getItem('sa_currentUser') || pendingBooking.email;
+  const entry = { ...pendingBooking, id, userEmail, payMethod:currentPayMethod, status:'Confirmed', createdAt: new Date().toLocaleString() };
+  bookings.push(entry);
+  localStorage.setItem('sa_bookings', JSON.stringify(bookings));
+  closePayment();
+  document.getElementById('confirmBookingId').textContent = id;
+  document.getElementById('confSport').textContent  = pendingBooking.sport;
+  document.getElementById('confDate').textContent   = pendingBooking.date;
+  document.getElementById('confSlot').textContent   = pendingBooking.slot;
+  document.getElementById('confirmationCard').classList.add('open');
+  setStepActive(3);
+  pendingBooking = null;
+  resetForm();
+}
+
+function closePayment(){ document.getElementById('paymentOverlay').classList.remove('open'); setStepActive(1); }
+
+function closeConfirm(){
+  document.getElementById('confirmationCard').classList.remove('open');
+  renderMyBookings();
+  renderAdmin();
+  setStepActive(1);
+  document.getElementById('mybookings').scrollIntoView({behavior:'smooth'});
+}
+
+/* ============================================================
+   MY BOOKINGS
+   ============================================================ */
+function renderMyBookings(){
+  const userEmail = localStorage.getItem('sa_currentUser');
+  const bookings  = JSON.parse(localStorage.getItem('sa_bookings')||'[]');
+  const mine      = userEmail ? bookings.filter(b=>b.userEmail===userEmail) : bookings;
+  const wrap = document.getElementById('myBookingsWrap');
+  if(!mine.length){ wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><p>No bookings yet. Reserve your first slot above!</p></div>'; return; }
+  wrap.innerHTML = `<table>
+    <thead><tr><th>Booking ID</th><th>Sport</th><th>Date</th><th>Slot</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody>
+    ${mine.map((b,i)=>`<tr>
+      <td><strong>${b.id}</strong></td>
+      <td><span class="badge badge-sport">${b.sport}</span></td>
+      <td>${b.date}</td>
+      <td>${b.slot}</td>
+      <td>₹${b.amount.toLocaleString('en-IN')}</td>
+      <td><span class="badge badge-confirmed">${b.status}</span></td>
+      <td><button class="btn-del" onclick="cancelBooking('${b.id}')">Cancel</button></td>
+    </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function cancelBooking(id){
+  if(!confirm('Cancel this booking?')) return;
+  let bookings = JSON.parse(localStorage.getItem('sa_bookings')||'[]');
+  bookings = bookings.filter(b=>b.id!==id);
+  localStorage.setItem('sa_bookings', JSON.stringify(bookings));
+  showToast('success','Booking Cancelled','Your slot has been released.','🗑️');
+  renderMyBookings();
+  renderAdmin();
+}
+
+/* ============================================================
+   ADMIN DASHBOARD
+   ============================================================ */
+function renderAdmin(){
+  const bookings = JSON.parse(localStorage.getItem('sa_bookings')||'[]');
+  document.getElementById('aTotal').textContent     = bookings.length;
+  document.getElementById('aFootball').textContent  = bookings.filter(b=>b.sport==='Football').length;
+  document.getElementById('aCricket').textContent   = bookings.filter(b=>b.sport==='Cricket').length;
+  document.getElementById('aBadminton').textContent = bookings.filter(b=>b.sport==='Badminton').length;
+  const filtered = adminFilter==='all' ? bookings : bookings.filter(b=>b.sport===adminFilter);
+  const wrap = document.getElementById('adminTableWrap');
+  if(!filtered.length){ wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><p>No bookings found.</p></div>'; return; }
+  wrap.innerHTML = `<table>
+    <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Sport</th><th>Date</th><th>Slot</th><th>Amount</th><th>Payment</th><th>Booked At</th><th>Action</th></tr></thead>
+    <tbody>
+    ${filtered.map(b=>`<tr>
+      <td><strong>${b.id}</strong></td>
+      <td>${b.name}</td>
+      <td style="font-size:12px;">${b.userEmail}</td>
+      <td><span class="badge badge-sport">${b.sport}</span></td>
+      <td>${b.date}</td>
+      <td>${b.slot}</td>
+      <td>₹${b.amount.toLocaleString('en-IN')}</td>
+      <td style="text-transform:capitalize;">${b.payMethod||'—'}</td>
+      <td style="font-size:12px;">${b.createdAt}</td>
+      <td><button class="btn-del" onclick="adminDelete('${b.id}')">Delete</button></td>
+    </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function adminDelete(id){
+  if(!confirm('Delete this booking from the system?')) return;
+  let bookings = JSON.parse(localStorage.getItem('sa_bookings')||'[]');
+  bookings = bookings.filter(b=>b.id!==id);
+  localStorage.setItem('sa_bookings', JSON.stringify(bookings));
+  renderAdmin();
+  renderMyBookings();
+  showToast('success','Deleted','Booking removed from system.','🗑️');
+}
+
+function filterAdmin(val, btn){
+  adminFilter = val;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAdmin();
+}
+
+/* ============================================================
+   GALLERY
+   ============================================================ */
+const GALLERY_ITEMS = [
+  { src:'turf pic uid.jpg',    label:'Main Turf', emoji:'🏟️' },
+  { src:'badminton pic.jpg',   label:'Badminton', emoji:'🏸' },
+  { src:'cricket pic.jpg',     label:'Cricket',   emoji:'🏏' },
+  { src:'cooldrinks pic.jpg',  label:'Refreshments', emoji:'🥤' },
+  { src:'Turf.jpg',            label:'Turf View', emoji:'⚽' },
+  { src:'Football.jpg',        label:'Football',  emoji:'⚽' },
+];
+
+function buildGallery(){
+  const track = document.getElementById('galleryTrack');
+  // Duplicate for infinite scroll
+  const items = [...GALLERY_ITEMS, ...GALLERY_ITEMS];
+  track.innerHTML = items.map(item=>`
+    <div style="position:relative;flex-shrink:0;">
+      <img class="gallery-img" src="${item.src}" alt="${item.label}"
+           onerror="this.parentElement.innerHTML='<div style=\\'width:280px;height:190px;border-radius:10px;background:rgba(0,255,204,0.06);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;flex-shrink:0;\\'><div style=\\'font-size:40px;\\'>${item.emoji}</div><div style=\\'font-size:13px;color:var(--text-muted);\\'>${item.label}</div></div>'"
+           onclick="openLightbox('${item.src}')">
+    </div>
+  `).join('');
+}
+
+function openLightbox(src){
+  document.getElementById('lbImg').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+
+function closeLightbox(){ document.getElementById('lightbox').classList.remove('open'); }
+
+/* ============================================================
+   CONTACT FORM
+   ============================================================ */
+function sendMessage(){
+  const name = document.getElementById('c_name').value.trim();
+  const email = document.getElementById('c_email').value.trim();
+  const msg = document.getElementById('c_msg').value.trim();
+  if(!name||!email||!msg){ showToast('error','Incomplete','Fill in all contact fields.','⚠️'); return; }
+  document.getElementById('c_name').value='';
+  document.getElementById('c_email').value='';
+  document.getElementById('c_msg').value='';
+  showToast('success','Message Sent!','We will get back to you within 24 hours.','📧');
+}
+
+/* ============================================================
+   STEPS INDICATOR
+   ============================================================ */
+function setStepActive(n){
+  for(let i=1;i<=3;i++){
+    const el = document.getElementById('step'+i+'Ind');
+    el.classList.remove('active','done');
+    if(i===n)   el.classList.add('active');
+    if(i<n)     el.classList.add('done');
+  }
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+function showToast(type, title, body, icon){
+  const container = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<div class="toast-icon">${icon}</div><div class="toast-msg"><div class="toast-title">${title}</div><div class="toast-body">${body}</div></div>`;
+  container.appendChild(t);
+  setTimeout(()=>t.style.opacity='0', 3000);
+  setTimeout(()=>t.remove(), 3500);
+}
+
+/* ============================================================
+   SCROLL EFFECTS
+   ============================================================ */
+function onScroll(){
+  const st = document.getElementById('scrollTop');
+  if(window.scrollY > 400) st.classList.add('show');
+  else st.classList.remove('show');
+}
+</script>
+</body>
+</html>
